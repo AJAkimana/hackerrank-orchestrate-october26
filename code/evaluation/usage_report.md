@@ -38,12 +38,13 @@ totals are therefore the same.
 | Resource | Role | Calls in the final run | Cost |
 |---|---|---|---|
 | Python 3.15 standard library (`csv`, `json`, `re`, `sqlite3`, `difflib`, `hashlib`) | All logic; SQL snapshots run in in-memory SQLite | — | $0 |
-| Ghostscript 10.05 (`gs`, local) | Text extraction from the 4 PDF evidence files | 4 | $0 |
-| Tesseract 5.5 OCR (local) | Text from the 11 screenshots; run once, then cached in `code/cache/ocr/` | 0 (cache hits); 11 on the first run | $0 |
+| Ghostscript 10.05 (`gs`, local) | Text of the 4 PDF evidence files; run once, then cached in `code/cache/pdf/` | 0 (cache hits); 4 on the first run | $0 |
+| Tesseract 5.5 OCR (local) | Text of the 11 screenshots; run once, then cached in `code/cache/ocr/` | 0 (cache hits); 11 on the first run | $0 |
 
 | Run metric | Value |
 |---|---|
-| Wall-clock time, full run (`python3 code/main.py`) | ~6 s (macOS laptop, warm OCR cache) |
+| Wall-clock time, full run (`python3 code/main.py`) | ~6 s (macOS laptop, warm text cache) |
+| External tools needed for the final run | none (verified with `gs` and `tesseract` removed from `PATH`, on Python 3.9) |
 | Evidence files read | 94 → 2,934 normalized records |
 | Requests linked together (shared activity stream) | 550 (518 evaluation + 32 samples) |
 | Output | 518 rows: 351 INCOMPLETE, 157 COMPLETE, 10 NOT_APPLICABLE |
@@ -57,7 +58,7 @@ totals are therefore the same.
   same answer on every run, and give the phrase behind each decision.
 * **Evidence reading** is structured: JSON, SQL, logs and handover text are
   parsed exactly, and the PDFs have a text layer. Only the screenshots need
-  OCR, which runs locally.
+  OCR, which runs locally once; both kinds of extracted text are cached.
 * **Determinism** is part of the contract: the same input always yields a
   byte-identical `output.csv`.
 

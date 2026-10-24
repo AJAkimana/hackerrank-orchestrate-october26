@@ -328,3 +328,25 @@ repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
 worktree=main
 parent_agent=none
 
+## [2026-10-24T21:42:19+00:00] Cache PDF text so the run needs Python only
+
+User Prompt (verbatim, secrets redacted):
+Cache the pdf text too
+
+Agent Response Summary:
+Generalized the screenshot OCR cache in code/audit/evidence.py into a shared cached_text(kind, file_id, extract) helper; pdf_text now caches Ghostscript output in code/cache/pdf/<file_id>.txt just as image_text caches OCR in code/cache/ocr/, using newline-preserving file I/O for Python 3.9 compatibility. Generated the 4 PDF cache files. Verified output.csv is byte-identical on the cache-writing run, the cache-reading run, and a run on Python 3.9 with gs and tesseract removed from PATH; a missing cache file without the tool fails with a clear message. Updated README (Python 3.9+ is the only requirement, tools optional), usage_report.md and evaluation_report.md. No commits made. Time remaining: 0d 14h 47m.
+
+Actions:
+* Edited code/audit/evidence.py and code/evaluation/evidence_coverage.py
+* Created code/cache/pdf/evidence_18.txt, evidence_27.txt, evidence_55.txt, evidence_58.txt
+* Edited README.md, code/evaluation/usage_report.md, code/evaluation/evaluation_report.md
+* Regression runs with cmp, including a run with a stripped PATH on /usr/bin/python3
+
+Context:
+tool=Claude Code
+model=claude-opus-5-5
+branch=main
+repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
+worktree=main
+parent_agent=none
+

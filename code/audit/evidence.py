@@ -28,7 +28,9 @@ from pathlib import Path
 
 from .common import DATASET_DIR, EVIDENCE_DIR, REPO_ROOT, read_csv
 
-OCR_CACHE_DIR = REPO_ROOT / "code" / "cache" / "ocr"
+# Extracted text of PDFs and screenshots, so normal runs need neither
+# Ghostscript nor Tesseract and always see exactly the same text.
+CACHE_DIR = REPO_ROOT / "code" / "cache"
 
 # Resource-id prefix -> owning system. Used when a file does not say.
 PREFIX_SYSTEM = {
@@ -300,34 +302,50 @@ def table_system_guess(table):
 
 # ------------------------------------------------------- PDFs and images
 
-def pdf_text(path):
-    """Text layer of a PDF via Ghostscript's txtwrite device."""
-    gs = shutil.which("gs") or shutil.which("gswin64c")
-    if not gs:
-        raise RuntimeError("Ghostscript (gs) is required to read PDF evidence")
-    out = subprocess.run([gs, "-q", "-dNOPAUSE", "-dBATCH", "-sDEVICE=txtwrite", "-sOutputFile=-", str(path)],
-                         capture_output=True, text=True, check=True)
-    return out.stdout
+def cached_text(kind, file_id, extract):
+    """Text for one evidence file from code/cache/<kind>/<file_id>.txt.
+    On a cache miss, extract() produces it and the cache is written, so the
+    external tool is only ever needed once."""
+    cache = CACHE_DIR / kind / f"{file_id}.txt"
+    if cache.exists():
+        with open(cache, encoding="utf-8", newline="") as f:
+            return f.read()
+    text = extract()
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    with open(cache, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+    return text
+
+
+def pdf_text(path, file_id):
+    """Text layer of a PDF (Ghostscript's txtwrite device), cached."""
+    def extract():
+        gs = shutil.which("gs") or shutil.which("gswin64c")
+        if not gs:
+            raise RuntimeError(f"No cached text for {file_id} and Ghostscript (gs) is not installed")
+        out = subprocess.run([gs, "-q", "-dNOPAUSE", "-dBATCH", "-sDEVICE=txtwrite", "-sOutputFile=-", str(path)],
+                             capture_output=True, text=True, check=True)
+        return out.stdout
+    return cached_text("pdf", file_id, extract)
 
 
 def image_text(path, file_id):
-    """OCR an image once and cache the text, so normal runs need no OCR tools
-    and always see the same text. Upscaling first makes small UI text legible."""
-    cache = OCR_CACHE_DIR / f"{file_id}.txt"
-    if cache.exists():
-        return cache.read_text(encoding="utf-8")
-    tesseract = shutil.which("tesseract")
-    if not tesseract:
-        raise RuntimeError(f"No OCR cache for {file_id} and tesseract is not installed")
-    with tempfile.TemporaryDirectory() as tmp:
-        source = path
-        if shutil.which("sips"):  # macOS built-in image tool
-            source = Path(tmp) / "big.png"
-            subprocess.run(["sips", "-Z", "4000", str(path), "--out", str(source)], capture_output=True, check=True)
-        out = subprocess.run([tesseract, str(source), "-", "--psm", "11"], capture_output=True, text=True, check=True)
-    OCR_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache.write_text(out.stdout, encoding="utf-8")
-    return out.stdout
+    """OCR text of a screenshot (Tesseract), cached. Upscaling first makes
+    small UI text legible."""
+    def extract():
+        tesseract = shutil.which("tesseract")
+        if not tesseract:
+            raise RuntimeError(f"No cached OCR text for {file_id} and tesseract is not installed")
+        with tempfile.TemporaryDirectory() as tmp:
+            source = path
+            if shutil.which("sips"):  # macOS built-in image tool
+                source = Path(tmp) / "big.png"
+                subprocess.run(["sips", "-Z", "4000", str(path), "--out", str(source)],
+                               capture_output=True, check=True)
+            out = subprocess.run([tesseract, str(source), "-", "--psm", "11"],
+                                 capture_output=True, text=True, check=True)
+        return out.stdout
+    return cached_text("ocr", file_id, extract)
 
 
 def parse_document(text, file_id, captured_at, source):
@@ -374,7 +392,7 @@ def parse_file(entry):
     if suffix == ".txt":
         return parse_handover(path, fid, cap)
     if suffix == ".pdf":
-        return parse_document(pdf_text(path), fid, cap, "pdf")
+        return parse_document(pdf_text(path, fid), fid, cap, "pdf")
     if suffix == ".png":
         return parse_document(image_text(path, fid), fid, cap, "image")
     raise ValueError(f"unsupported evidence type: {path}")

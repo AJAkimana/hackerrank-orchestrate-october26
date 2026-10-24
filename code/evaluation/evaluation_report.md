@@ -75,7 +75,7 @@ There are no public answers for these cases; we check the contract and sanity-ch
 | Contract check (`main.py --pred output.csv`) | **OK**: header, 518 rows, sorted numerically by `case_id`, valid JSON, consecutive `step_no`, phase/operation order, allowed operation→state pairs, empty `evidence_id` on future steps, evidence on findings and on COMPLETE verifications, `[]` for NOT_APPLICABLE |
 | Status distribution | 351 INCOMPLETE, 157 COMPLETE, 10 NOT_APPLICABLE (samples: 22 / 10 / 0) |
 | Steps | 3,099 in total, 6.0 per case on average (max 14) |
-| Runtime | ~6 s for the full run on a laptop (OCR text is cached) |
+| Runtime | ~6 s for the full run on a laptop (PDF and OCR text are cached; the run needs Python only) |
 
 ## 4. Custom evaluation cases
 

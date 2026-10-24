@@ -28,7 +28,7 @@ def raw_text(entry):
     """The file's text as a human would read it (PDF text / OCR / raw)."""
     path = DATASET_DIR / entry["file_path"]
     if path.suffix == ".pdf":
-        return pdf_text(path)
+        return pdf_text(path, entry["file_id"])
     if path.suffix == ".png":
         return image_text(path, entry["file_id"])
     return path.read_text(encoding="utf-8")

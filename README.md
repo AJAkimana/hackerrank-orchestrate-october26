@@ -33,13 +33,18 @@ the same input always gives a byte-identical `output.csv`.
 
 ## Setup
 
-| Requirement | Why | Install |
-|---|---|---|
-| **Python 3.9+** | Runs everything; standard library only, no `pip install` | python.org, or the system Python |
-| **Ghostscript** (`gs`) | Reads the text of the 4 PDF evidence files | macOS `brew install ghostscript` · Ubuntu `sudo apt install ghostscript` · Windows: ghostscript.com (`gswin64c` is detected) |
-| Tesseract *(optional)* | OCR for the 11 screenshots. Not needed: the text is cached in `code/cache/ocr/` | `brew install tesseract` / `sudo apt install tesseract-ocr` |
+**The only requirement is Python 3.9 or newer.** The code uses the standard
+library only, so there is nothing to `pip install`, and no API keys,
+environment variables or `.env` file are needed.
 
-No API keys, environment variables or `.env` file are needed.
+The text of the 4 PDFs and the 11 screenshots is cached in `code/cache/pdf/`
+and `code/cache/ocr/`, so the external extraction tools are **optional**. They
+are only used to rebuild a cache file that has been deleted:
+
+| Optional tool | Rebuilds | Install |
+|---|---|---|
+| Ghostscript (`gs`) | `code/cache/pdf/` (PDF text layer) | macOS `brew install ghostscript` · Ubuntu `sudo apt install ghostscript` · Windows: ghostscript.com (`gswin64c` is detected) |
+| Tesseract | `code/cache/ocr/` (screenshot OCR) | `brew install tesseract` · `sudo apt install tesseract-ocr` |
 
 The `dataset/` folder must sit at the repository root, next to `code/`.
 
@@ -91,7 +96,7 @@ request ─► intent ─► identity ─► linking ─► state at audit_at �
 
 | Stage | Module | What it does |
 |---|---|---|
-| Evidence | [`audit/evidence.py`](code/audit/evidence.py) | Turns all 94 files (JSON, 6 log formats, SQL snapshots run in in-memory SQLite, handover text, PDFs, OCR'd screenshots) into 2,934 uniform records: *file, time, system, resource, fields, identifiers*. Also records each snapshot's **scope**, so an empty snapshot can prove a record is gone. |
+| Evidence | [`audit/evidence.py`](code/audit/evidence.py) | Turns all 94 files (JSON, 6 log formats, SQL snapshots run in in-memory SQLite, handover text, cached PDF text, cached screenshot OCR) into 2,934 uniform records: *file, time, system, resource, fields, identifiers*. Also records each snapshot's **scope**, so an empty snapshot can prove a record is gone. |
 | Intent | [`audit/intent.py`](code/audit/intent.py) | Decides from `request_text` whether deletion is authorized. Narrow "keep" rules (*"do not close the account"*, *"marketing lists only"*) come first, then deletion words in 9 languages. Each decision carries the phrase that triggered it. |
 | Identity | [`audit/identity.py`](code/audit/identity.py) | Maps the request email (current or historical, any case) to the user, and rebuilds every email, phone and email hash the user has had. `email_hash` is sha256 of the email, so hashes of old emails are recomputed. |
 | Linking | [`audit/linking.py`](code/audit/linking.py) | Finds the user's resources: **identifier** matches in evidence, plus **deletion-worker activity** in a timing window around `reported_at` (deleted records have no identifiers left). Requests share one activity stream, so collisions are settled **globally**: one account per subject, matched one-to-one; the status↔result consistency (`COMPLETE`↔`SUCCESS`…); and records go to the request whose account was processed just before them. |
@@ -123,7 +128,8 @@ request ─► intent ─► identity ─► linking ─► state at audit_at �
 code/
 ├── main.py                  entry point: python3 code/main.py
 ├── audit/                   the agent (stages listed above) + common.py (paths, step contract)
-├── cache/ocr/               cached OCR text of the 11 screenshots
+├── cache/pdf/               cached text of the 4 PDFs (Ghostscript)
+├── cache/ocr/               cached OCR text of the 11 screenshots (Tesseract)
 └── evaluation/
     ├── main.py              contract checker and scorer
     ├── custom_cases.py      6 custom evaluation cases
@@ -137,9 +143,9 @@ log.txt                      AI-assistant transcript (chat_transcript submission
 
 ## Packaging and submission
 
-Build `code.zip` from the repository root (it excludes `dataset/`, caches and
-virtual environments; the OCR cache under `code/cache/` is included on
-purpose):
+Build `code.zip` from the repository root (it excludes `dataset/`, Python
+caches and virtual environments; the text cache under `code/cache/` is
+included on purpose, so the package runs with Python alone):
 
 ```bash
 zip -r code.zip README.md code -x "*/__pycache__/*" "*/.venv/*" "*/venv/*" "*/.DS_Store"
