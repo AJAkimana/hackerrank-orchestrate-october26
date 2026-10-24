@@ -216,6 +216,12 @@ class Linker:
                     del links[case][r]
         return links
 
+    def records_for(self, resource, link):
+        """Every evidence record about a linked resource: once the resource
+        is ours, a 404 or a redacted copy is just as relevant as a match."""
+        records = list(self.records_by_resource.get(resource, []))
+        return records + [r for r in link["records"] if r not in records]
+
     def belongs_to_someone_else(self, resource, user_id, audit_at):
         catalog = self.catalog.get(resource)
         if catalog and catalog[0] != user_id:
