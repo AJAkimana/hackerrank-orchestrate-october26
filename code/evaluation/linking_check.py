@@ -9,8 +9,8 @@ that truly belong to the subject. We report:
     recall     share of gold resources the linker found
     precision  share of linked resources that are gold
 
-Extra links are not all errors yet: Phase 4 drops resources whose state
-needs no step. The numbers show what Phase 4 will have to filter.
+Extra links are not all errors yet: resources whose state is UNKNOWN get
+no steps later (audit.steps). The numbers show what is left to filter.
 """
 
 import argparse
@@ -28,6 +28,7 @@ from audit.linking import Linker  # noqa: E402
 
 
 def main(argv=None):
+    """Link all requests together, then score the sample cases."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", help="show every link for one case")
     parser.add_argument("--quiet", action="store_true")

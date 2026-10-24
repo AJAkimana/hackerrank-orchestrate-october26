@@ -6,7 +6,7 @@ Usage (from the repository root):
     python3 code/main.py --requests dataset/sample_deletion_requests.csv --out /tmp/sample_pred.csv
 
 The work happens in audit.pipeline.Auditor; see that module for the
-phases (evidence -> identity -> linking -> state -> steps -> intent).
+stages (intent -> identity -> linking -> state -> steps).
 """
 
 import argparse
@@ -20,6 +20,7 @@ from audit.pipeline import Auditor  # noqa: E402
 
 
 def main(argv=None):
+    """Parse arguments, audit the requests, and write the output CSV."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--requests", type=Path, default=DATASET_DIR / "deletion_requests.csv")
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "output.csv")

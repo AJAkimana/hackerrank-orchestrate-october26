@@ -1,5 +1,5 @@
 # Author: AJAkimana
-"""Measure (state at audit time) against the sample answers.
+"""Measure resource state at audit time (audit.state) against the samples.
 
 Usage (from the repository root):
     python3 code/evaluation/state_check.py [--case case_05] [--quiet]
@@ -9,7 +9,8 @@ Each gold step implies, for its resource:
     status     from the finding if there is one (REMAINING -> EXPOSED, ...),
                otherwise from the verification (already compliant)
     evidence   the file cited by the finding, or by a COMPLETE verification
-Only resources the linker found are compared; missing links are Phase 3's.
+Only resources the linker found are compared; missing links are counted
+by linking_check.py instead.
 """
 
 import argparse
@@ -40,6 +41,7 @@ FINDING_STATUS = {
 
 
 def expected(steps, status):
+    """{resource_id: {treatment, status, evidence}} implied by gold steps."""
     out = {}
     for s in steps:
         e = out.setdefault(s["resource_id"], {"evidence": ""})
@@ -55,6 +57,7 @@ def expected(steps, status):
 
 
 def main(argv=None):
+    """Resolve states for every sample case and compare with the gold."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--case")
     parser.add_argument("--quiet", action="store_true")

@@ -1,5 +1,5 @@
 # Author: AJAkimana
-"""Phase 6: does a request actually authorize deletion?
+"""Does a request actually authorize deletion?
 
 Requests arrive in several languages. Non-deletion requests (marketing
 opt-out, data copy/export, correction, login help) look like deletion cases

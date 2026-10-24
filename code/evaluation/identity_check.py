@@ -8,7 +8,7 @@ Checks
     1. every request email (samples + evaluation) resolves to exactly one user
     2. for the sample answers, how many gold resources already share an
        identifier with the resolved subject in some evidence record. The rest
-       must be linked another way in Phase 3 (activity log, aliases, ...).
+       must be linked another way by audit.linking (activity log, ...).
 """
 
 import argparse
@@ -25,6 +25,7 @@ from audit.identity import IdentityIndex  # noqa: E402
 
 
 def main(argv=None):
+    """Run both identity checks; --case also prints one subject in full."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--case", help="print the resolved subject for one case")

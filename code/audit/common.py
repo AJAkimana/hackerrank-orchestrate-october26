@@ -1,5 +1,5 @@
 # Author: AJAkimana
-"""Shared building blocks: file paths, CSV I/O, and the step contract.
+"""Shared building blocks: file paths, CSV I/O, times, and the step contract.
 
 Everything that the solver (code/main.py) and the evaluator
 (code/evaluation/main.py) must agree on lives here, so the two never drift.
@@ -7,6 +7,7 @@ Everything that the solver (code/main.py) and the evaluator
 
 import csv
 import json
+from datetime import datetime
 from pathlib import Path
 
 # Paths are resolved from this file, so the code works from any working
@@ -43,7 +44,13 @@ OP_RANK = {op: i for i, (_, op, _) in enumerate(OPERATIONS)}
 STEP_FIELDS = ("step_no", "phase", "system_id", "resource_id", "operation", "state", "evidence_id")
 
 
+def parse_time(value):
+    """ISO-8601 text such as 2026-09-15T12:00:00Z -> aware datetime."""
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def read_csv(path):
+    """All rows of a UTF-8 CSV file as a list of dicts."""
     with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
@@ -68,13 +75,13 @@ def order_steps(steps):
 
 
 def dump_steps(steps):
-    # Compact, key-ordered JSON keeps output byte-for-byte deterministic.
+    """Steps as compact JSON, so the output is byte-for-byte deterministic."""
     return json.dumps(steps, ensure_ascii=False, separators=(",", ":"))
 
 
 def case_sort_key(case_id):
-    # IDs are not zero-padded (case_33 ... case_550), so sort numerically;
-    # a plain string sort would put case_100 before case_33.
+    """Sort key for case ids. They are not zero-padded (case_33 ...
+    case_550), so a plain string sort would put case_100 before case_33."""
     prefix, _, number = case_id.rpartition("_")
     return (prefix, int(number)) if number.isdigit() else (case_id, 0)
 

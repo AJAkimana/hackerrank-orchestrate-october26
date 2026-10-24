@@ -1,18 +1,19 @@
 # Author: AJAkimana
 """What state is each linked resource in at audit_at?
 
-For every resource we linked to the subject we decide:
+For every resource linked to the subject we decide:
 
     treatment  what policy requires (deletion_rules.csv):
                DELETE | REDACT | ANONYMIZE | RETAIN | FLOW | BACKUP
     status     what the evidence shows at audit_at:
-               ABSENT          the record is gone
-               EXPOSED         present and still carrying identifiers
-               CLEAN           present without prohibited identifiers
-                               (redacted / anonymized)
-               PRESENT         present (for records that must be kept)
-               ACTIVE/DISABLED a data flow is running / stopped
-               RESTORABLE/BLOCKED a backup can / cannot be restored
+               ABSENT              the record is gone
+               EXPOSED             present and still carrying identifiers
+               CLEAN               present without prohibited identifiers
+                                   (redacted / anonymized)
+               PRESENT             present (for records that must be kept)
+               ACTIVE / DISABLED   a data flow is running / stopped
+               RESTORABLE / BLOCKED a backup can / cannot be restored
+               UNKNOWN             no visible evidence says anything
     evidence   the file that proves it
 
 Rules for reading the evidence:
@@ -24,7 +25,7 @@ Rules for reading the evidence:
     only for records that must be deleted; anything else stays UNKNOWN.
 """
 
-from .linking import ts
+from .common import parse_time
 
 DIRECT_IDENTIFIERS = (
     "email", "phone", "full_name", "name", "display_name", "email_hash",
@@ -34,12 +35,23 @@ DIRECT_IDENTIFIERS = (
 ATTRIBUTION = ("customer_reference", "user_id")
 TRUE = {"true", "1", "yes", "True"}
 FALSE = {"false", "0", "no", "False"}
+# The deletion worker's attempted operation tells which rule applied.
 WORKER_TREATMENT = {"DELETE_RECORD": "DELETE", "REDACT_RECORD": "REDACT",
                     "ANONYMIZE_RECORD": "ANONYMIZE"}
-SNAPSHOT_SOURCES = ("sql", "json")
+# Resource kinds whose treatment never depends on the record itself.
+FIXED_TREATMENT = {
+    "data_flow": "FLOW", "backup": "BACKUP",
+    "audit_record": "RETAIN", "legal_hold": "RETAIN",
+    "tombstone": "REDACT",  # ACCOUNT_TOMBSTONE: keep user_id, drop identifiers
+    "account": "DELETE", "search": "DELETE", "export": "DELETE",
+    "cache": "DELETE", "marketing": "DELETE", "object": "DELETE",
+}
+# At equal times, the state that needs action wins, to stay on the safe side.
+SEVERITY = {"EXPOSED": 3, "ACTIVE": 3, "RESTORABLE": 3, "PRESENT": 2}
 
 
 def kind(resource):
+    """account_005 -> account, data_flow_12 -> data_flow."""
     return resource.rsplit("_", 1)[0]
 
 
@@ -56,42 +68,51 @@ def filled(value):
 # ------------------------------------------------------------- treatment
 
 def treatment_for(resource, link):
+    """Which deletion rule applies to this resource.
+
+    Most kinds have a fixed rule. Analytics and support records depend on
+    what the record is: the deletion worker's own attempted operation says
+    so most clearly; otherwise the record's fields decide (a marketing
+    opt-in record is deleted, a support attachment is deleted, a support
+    message is redacted).
+    """
     k = kind(resource)
-    if k == "data_flow":
-        return "FLOW"
-    if k == "backup":
-        return "BACKUP"
-    if k in ("audit_record", "legal_hold"):
-        return "RETAIN"
-    if k == "tombstone":
-        return "REDACT"  # ACCOUNT_TOMBSTONE: keep user_id, drop identifiers
-    if k in ("account", "search", "export", "cache", "marketing", "object"):
-        return "DELETE"
-    # analytics / support / email logs: the worker's own operation is the
-    # clearest statement of which rule applied (activity is a claim about the
-    # result, not about the policy)
+    if k in FIXED_TREATMENT:
+        return FIXED_TREATMENT[k]
     for event in link["events"]:
         if event.get("event_type") in WORKER_TREATMENT:
             return WORKER_TREATMENT[event["event_type"]]
-    fields = [r["fields"] for r in link["records"]]
     if k == "analytics":
-        return "DELETE" if any("email_opt_in" in f for f in fields) else "ANONYMIZE"
+        is_marketing = any("email_opt_in" in r["fields"] for r in link["records"])
+        return "DELETE" if is_marketing else "ANONYMIZE"
     if k == "support":
-        attachment = any("ATTACHMENT" in str(f.get("record_type", "")).upper()
-                         or "attachment" in str(f.get("collection_name", "")) or f.get("file")
-                         for f in fields) \
-            or any(r["container"] == "ticket_attachments" for r in link["records"]) \
-            or any(r["source"] in ("pdf", "image") and "attachment" in r["fields"].get("text", "").lower()
-                   for r in link["records"])
-        return "DELETE" if attachment else "REDACT"
+        return "DELETE" if is_attachment(link["records"]) else "REDACT"
     if k == "email_delivery":
         return "REDACT"
     return "DELETE"
 
 
+def is_attachment(records):
+    """A support record is an attachment (deleted whole) rather than a
+    conversation (redacted) when any of its records says so."""
+    for r in records:
+        f = r["fields"]
+        if ("ATTACHMENT" in str(f.get("record_type", "")).upper()
+                or "attachment" in str(f.get("collection_name", ""))
+                or f.get("file")
+                or r["container"] == "ticket_attachments"
+                or (r["source"] in ("pdf", "image")
+                    and "attachment" in f.get("text", "").lower())):
+            return True
+    return False
+
+
 # ---------------------------------------------------------- one record
 
 def absent(f):
+    """Does this record say the resource does not exist? Each format says it
+    differently: HTTP 404, zero rows, a NOT_FOUND result, a null profile,
+    or a search with no hits."""
     if str(f.get("http_status", f.get("status_code", ""))) == "404":
         return True
     if str(f.get("rows", "")) == "0":
@@ -107,7 +128,13 @@ def absent(f):
 
 
 def exposed(f, treatment):
-    """Does a present record still carry identifiers policy forbids?"""
+    """Does a present record still carry identifiers policy forbids?
+
+    Explicit verdicts in the record (IDENTIFIABLE, REDACTED, a PII detector
+    hit) win. Otherwise look for any filled direct-identifier field,
+    including inside nested search hits and profiles. For anonymization the
+    internal user link (customer_reference / user_id) also counts.
+    """
     result = str(f.get("result", "")).upper()
     if result in ("IDENTIFIABLE", "EXPOSED"):
         return True
@@ -118,12 +145,12 @@ def exposed(f, treatment):
     if str(f.get("direct_identifiers", "")) == "0":
         return False
     values = dict(f)
-    for doc in (f.get("hits") or {}).get("documents", []) if isinstance(f.get("hits"), dict) else []:
+    hits = f.get("hits")
+    for doc in hits.get("documents", []) if isinstance(hits, dict) else []:
         values.update({k: v for k, v in doc.items() if filled(v)})
     if isinstance(f.get("profile"), dict):
         values.update(f["profile"])
-    keys = DIRECT_IDENTIFIERS + \
-        (ATTRIBUTION if treatment == "ANONYMIZE" else ())
+    keys = DIRECT_IDENTIFIERS + (ATTRIBUTION if treatment == "ANONYMIZE" else ())
     return any(filled(values.get(k)) for k in keys)
 
 
@@ -133,22 +160,9 @@ def classify(record, treatment, subject_ids):
     if record["source"] in ("pdf", "image"):
         return classify_document(record, treatment, subject_ids)
     if treatment == "FLOW":
-        enabled = flag(f.get("enabled"))
-        result = str(f.get("result", "")).upper()
-        if result in ("ACTIVE", "DISABLED"):
-            return result
-        return None if enabled is None else ("ACTIVE" if enabled else "DISABLED")
+        return flow_status(f)
     if treatment == "BACKUP":
-        result = str(f.get("result", "")).upper()
-        if result == "ACTIVE":
-            return "RESTORABLE"
-        if result == "BLOCKED" or f.get("decision") == "deny":
-            return "BLOCKED"
-        allowed = flag(f.get("restore_allowed"))
-        if allowed is None and flag(f.get("eligible")) is not None:
-            allowed = flag(f.get("eligible")) and not flag(
-                f.get("deletion_block"))
-        return None if allowed is None else ("RESTORABLE" if allowed else "BLOCKED")
+        return backup_status(f)
     if absent(f):
         return "ABSENT"
     if treatment == "RETAIN":
@@ -158,8 +172,31 @@ def classify(record, treatment, subject_ids):
     return "EXPOSED"  # DELETE: any surviving copy is a remaining record
 
 
+def flow_status(f):
+    """ACTIVE / DISABLED from a connector record, or None."""
+    result = str(f.get("result", "")).upper()
+    if result in ("ACTIVE", "DISABLED"):
+        return result
+    enabled = flag(f.get("enabled"))
+    return None if enabled is None else ("ACTIVE" if enabled else "DISABLED")
+
+
+def backup_status(f):
+    """RESTORABLE / BLOCKED from a backup record, or None. Restore policy
+    logs use eligible + deletion_block instead of restore_allowed."""
+    result = str(f.get("result", "")).upper()
+    if result == "ACTIVE":
+        return "RESTORABLE"
+    if result == "BLOCKED" or f.get("decision") == "deny":
+        return "BLOCKED"
+    allowed = flag(f.get("restore_allowed"))
+    if allowed is None and flag(f.get("eligible")) is not None:
+        allowed = flag(f.get("eligible")) and not flag(f.get("deletion_block"))
+    return None if allowed is None else ("RESTORABLE" if allowed else "BLOCKED")
+
+
 def classify_document(record, treatment, subject_ids):
-    """PDFs and screenshots: the resource appears next to the subject."""
+    """PDFs and screenshots: read the lines around the resource id."""
     context = " ".join(record["fields"].get("context", [])).lower()
     if treatment == "FLOW":
         return "DISABLED" if "disabled" in context or "paused" in context else "ACTIVE"
@@ -175,73 +212,76 @@ def classify_document(record, treatment, subject_ids):
 # ------------------------------------------------------------ resolver
 
 class StateResolver:
+    """Decides the state of a request's linked resources at its audit_at."""
+
     def __init__(self, manifest):
-        # snapshot files and the systems they fully captured
+        # (captured_at, file_id, systems covered) for every SQL/JSON snapshot,
+        # oldest first; used to prove absence when nothing else is known
         self.snapshots = []
         for entry in manifest:
-            path = entry["file_path"]
-            if not path.endswith((".sql", ".json")):
+            if not entry["file_path"].endswith((".sql", ".json")):
                 continue
-            systems = {s["system_id"]
-                       for s in entry.get("scope", []) if s["system_id"]}
-            self.snapshots.append(
-                (ts(entry["captured_at"]), entry["file_id"], systems))
+            systems = {s["system_id"] for s in entry.get("scope", []) if s["system_id"]}
+            self.snapshots.append((parse_time(entry["captured_at"]), entry["file_id"], systems))
         self.snapshots.sort()
 
     def resolve(self, request, subject, links):
-        """Return {resource_id: state dict} for one request."""
-        audit_at = ts(request["audit_at"])
+        """Return {resource_id: state} for one request's links.
+
+        A state holds treatment, status, evidence_id, observed_at, the basis
+        ("observed", "snapshot_absence" or "none") and the full observation
+        history for debugging.
+        """
+        audit_at = parse_time(request["audit_at"])
         subject_ids = set(subject["identifiers"])
         states = {}
         for resource, link in links.items():
             treatment = treatment_for(resource, link)
-            observations = []
-            for rec in link_records(link):
-                if ts(rec["captured_at"]) > audit_at:
-                    continue
-                status = classify(rec, treatment, subject_ids)
-                if status:
-                    when = ts(rec["captured_at"] if rec["source"]
-                              == "sql" else rec["observed_at"])
-                    observations.append(
-                        (when, ts(rec["captured_at"]), status, rec["file_id"]))
+            observations = self.observations(link, treatment, subject_ids, audit_at)
             basis = "observed"
             # Absence from a snapshot only proves something when absence is
-            # the goal; an anonymized or retained record should still be there.
+            # the goal; an anonymized or retained record should still exist.
             if not observations and treatment == "DELETE":
                 found = self.absence_snapshot(link["system_id"], audit_at)
                 if found:
-                    observations.append(
-                        (found[0], found[0], "ABSENT", found[1]))
+                    observations = [(found[0], found[0], "ABSENT", found[1])]
                     basis = "snapshot_absence"
-            if not observations:
-                states[resource] = {"resource_id": resource, "system_id": link["system_id"],
-                                    "treatment": treatment, "status": "UNKNOWN",
-                                    "evidence_id": "", "basis": "none", "history": []}
-                continue
-            # latest observation wins; at equal times a worse state wins
-            severity = {"EXPOSED": 3, "ACTIVE": 3,
-                        "RESTORABLE": 3, "PRESENT": 2}
-            observations.sort(key=lambda o: (
-                o[0], o[1], severity.get(o[2], 1)))
-            when, _, status, file_id = observations[-1]
-            states[resource] = {
-                "resource_id": resource, "system_id": link["system_id"],
-                "treatment": treatment, "status": status, "evidence_id": file_id,
-                "observed_at": when.isoformat(), "basis": basis,
-                "history": [(o[0].isoformat(), o[2], o[3]) for o in observations],
-            }
+            states[resource] = self.state(resource, link, treatment, observations, basis)
         return states
 
+    @staticmethod
+    def observations(link, treatment, subject_ids, audit_at):
+        """(observed time, capture time, status, file_id) for every visible
+        record of the resource that says something about its state. SQL rows
+        are timed by the snapshot, since updated_at may be much older."""
+        found = []
+        for rec in link.get("all_records", link["records"]):
+            captured = parse_time(rec["captured_at"])
+            if captured > audit_at:
+                continue
+            status = classify(rec, treatment, subject_ids)
+            if status:
+                when = captured if rec["source"] == "sql" else parse_time(rec["observed_at"])
+                found.append((when, captured, status, rec["file_id"]))
+        return found
+
+    @staticmethod
+    def state(resource, link, treatment, observations, basis):
+        """The latest observation becomes the state (UNKNOWN if none)."""
+        base = {"resource_id": resource, "system_id": link["system_id"], "treatment": treatment}
+        if not observations:
+            return {**base, "status": "UNKNOWN", "evidence_id": "", "basis": "none", "history": []}
+        observations.sort(key=lambda o: (o[0], o[1], SEVERITY.get(o[2], 1)))
+        when, _, status, file_id = observations[-1]
+        return {**base, "status": status, "evidence_id": file_id,
+                "observed_at": when.isoformat(), "basis": basis,
+                "history": [(o[0].isoformat(), o[2], o[3]) for o in observations]}
+
     def absence_snapshot(self, system_id, audit_at):
+        """(time, file_id) of the latest snapshot at or before audit_at that
+        covered this system, or None."""
         latest = None
         for when, file_id, systems in self.snapshots:
             if when <= audit_at and system_id in systems:
                 latest = (when, file_id)
         return latest
-
-
-def link_records(link):
-    """Evidence records behind a link: those it was found with, plus any
-    other record of the same resource (attached by the caller)."""
-    return link.get("all_records", link["records"])

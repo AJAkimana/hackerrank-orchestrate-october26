@@ -113,6 +113,7 @@ def check_contract(path, requests):
 
 
 def step_tuple(step):
+    """A step's compared fields as a hashable tuple (step_no excluded)."""
     return tuple(step.get(k) for k in COMPARED_FIELDS)
 
 
@@ -169,6 +170,7 @@ def score(preds, gold):
 
 
 def print_report(metrics, show_failures):
+    """Print the metrics table, the status confusion, and failing cases."""
     pct = lambda x: f"{100 * x:6.2f}%"  # noqa: E731
     print(f"\nCases scored          {metrics['cases']}")
     print(f"Status accuracy       {pct(metrics['status_accuracy'])}")
@@ -198,6 +200,8 @@ def print_report(metrics, show_failures):
 
 
 def main(argv=None):
+    """Contract-check a prediction file and, with gold answers, score it.
+    Returns a non-zero exit code when the contract check fails."""
     parser = argparse.ArgumentParser(description="Evaluate deletion-audit predictions.")
     parser.add_argument("--run-samples", action="store_true", help="run code/main.py on the samples, then score")
     parser.add_argument("--pred", type=Path)

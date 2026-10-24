@@ -20,10 +20,13 @@ from .evidence import norm_phone
 
 
 def norm_email(value):
+    """Emails compare case-insensitively and without surrounding spaces."""
     return value.strip().lower()
 
 
 def email_hash(email):
+    """email_hash in user_identities.csv is sha256 of the normalized email
+    (verified for all 850 users), so hashes of old emails can be rebuilt."""
     return hashlib.sha256(norm_email(email).encode("utf-8")).hexdigest()
 
 
@@ -31,6 +34,8 @@ class IdentityIndex:
     """Lookup from any email a user ever had to that user's full identity."""
 
     def __init__(self, identities=None, audit_log=None):
+        """Index every current and historical email. The CSVs are read from
+        the dataset unless rows are passed in (handy for tests)."""
         identities = identities if identities is not None else read_csv(
             DATASET_DIR / "user_identities.csv")
         audit_log = audit_log if audit_log is not None else read_csv(

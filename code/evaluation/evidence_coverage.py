@@ -1,5 +1,5 @@
 # Author: AJAkimana
-"""Check that the Phase 1 evidence parsers extract everything.
+"""Check that the evidence parsers (audit.evidence) extract everything.
 
 Usage (from the repository root):
     python3 code/evaluation/evidence_coverage.py [--show RESOURCE_ID]
@@ -25,6 +25,7 @@ from audit.evidence import RESOURCE_RE, image_text, load_evidence, pdf_text  # n
 
 
 def raw_text(entry):
+    """The file's text as a human would read it (PDF text / OCR / raw)."""
     path = DATASET_DIR / entry["file_path"]
     if path.suffix == ".pdf":
         return pdf_text(path)
@@ -34,6 +35,7 @@ def raw_text(entry):
 
 
 def main(argv=None):
+    """Run the three coverage checks and print what is missing."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--show", help="print every record for this resource id")
     args = parser.parse_args(argv)

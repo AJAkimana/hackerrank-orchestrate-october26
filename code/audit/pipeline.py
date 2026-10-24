@@ -24,6 +24,8 @@ def authorizes_deletion(request):
 
 
 class Auditor:
+    """Loads all participant data once; audit() answers a list of requests."""
+
     def __init__(self):
         self.records, self.manifest = load_evidence()
         self.identities = IdentityIndex()

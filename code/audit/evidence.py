@@ -1,9 +1,9 @@
 # Author: AJAkimana
-"""Phase 1: turn every evidence file into one uniform list of records.
+"""Turn every evidence file into one uniform list of records.
 
 Each record answers: "file F, at time T, shows system S / resource R with
 these fields". Interpreting what the fields *mean* (present? redacted?
-enabled?) is left to later phases; this module only extracts faithfully.
+enabled?) is left to audit.state; this module only extracts faithfully.
 
 Record shape (a plain dict):
     file_id       evidence_NN from evidence_files.csv
@@ -58,15 +58,18 @@ TIME_KEYS = ("observed_at", "recorded_at", "captured_at", "updated_at", "indexed
 # ---------------------------------------------------------------- helpers
 
 def system_for(resource_id, declared=None):
+    """Owning system from the resource id prefix, else the declared one."""
     m = RESOURCE_RE.fullmatch(resource_id or "")
     return PREFIX_SYSTEM[m.group(1)] if m else declared
 
 
 def norm_phone(value):
+    """+1 (202) 555-0103 -> phone:12025550103, so formats compare equal."""
     return "phone:" + re.sub(r"\D", "", value)
 
 
 def strings_in(value):
+    """Every scalar inside a nested dict/list value, as strings."""
     if isinstance(value, dict):
         return [s for v in value.values() for s in strings_in(v)]
     if isinstance(value, list):
@@ -85,6 +88,9 @@ def identifiers_in(value):
 
 
 def make_record(file_id, captured_at, resource_id, fields, source, container, system=None, observed_at=None):
+    """Build one uniform record (see the module docstring for its shape).
+    observed_at defaults to the record's own timestamp field, else the
+    file's capture time; identifiers are extracted from all field values."""
     return {
         "file_id": file_id,
         "captured_at": captured_at,
@@ -112,6 +118,8 @@ def parse_json(path, file_id, captured_at):
     records, scope = [], []
 
     def walk(node, system, container, when):
+        """Depth-first walk carrying the nearest system / collection /
+        timestamp seen on the way down."""
         if isinstance(node, list):
             for item in node:
                 walk(item, system, container, when)
@@ -146,6 +154,8 @@ HANDOVER_RE = re.compile(r"^- (\S+) \| (\S+) \| (\S+) \| (\S+) \| (\S+) \| (.+)$
 
 
 def parse_handover(path, file_id, captured_at):
+    """Shift-handover text: one "- time | system | resource | category |
+    result | subject" line per checked resource."""
     records = []
     for line in path.read_text(encoding="utf-8").splitlines():
         m = HANDOVER_RE.match(line.strip())
@@ -255,9 +265,7 @@ def parse_sql(path, file_id, captured_at):
     for table in tables:
         if table == "snapshot_scope":
             continue
-        table_systems = {r[0] for r in db.execute(f'SELECT DISTINCT origin_system FROM "{table}"')} \
-            if "origin_system" in [c[1] for c in db.execute(f'PRAGMA table_info("{table}")')] else set()
-        for system in table_systems or {TABLE_SYSTEM.get(table) or table_system_guess(table)}:
+        for system in systems_in_table(db, table):
             scope.append({"system_id": system, "container": table, "captured_at": snapshot_at})
         for row in db.execute(f'SELECT * FROM "{table}"'):
             fields = dict(row)
@@ -270,8 +278,20 @@ def parse_sql(path, file_id, captured_at):
     return records, scope
 
 
+def systems_in_table(db, table):
+    """Systems a table holds data for. Generic replica tables name them in
+    an origin_system column; other tables map from their name."""
+    columns = [c[1] for c in db.execute(f'PRAGMA table_info("{table}")')]
+    if "origin_system" in columns:
+        systems = {r[0] for r in db.execute(f'SELECT DISTINCT origin_system FROM "{table}"')}
+        if systems:
+            return systems
+    return {TABLE_SYSTEM.get(table) or table_system_guess(table)}
+
+
 def table_system_guess(table):
-    # customer_profiles_primary / _failover_replica -> account_service, etc.
+    """customer_profiles_primary / _failover_replica -> account_service,
+    search_documents_primary -> search_service."""
     for prefix, system in (("customer_profiles", "account_service"), ("search_documents", "search_service")):
         if table.startswith(prefix):
             return system
@@ -281,6 +301,7 @@ def table_system_guess(table):
 # ------------------------------------------------------- PDFs and images
 
 def pdf_text(path):
+    """Text layer of a PDF via Ghostscript's txtwrite device."""
     gs = shutil.which("gs") or shutil.which("gswin64c")
     if not gs:
         raise RuntimeError("Ghostscript (gs) is required to read PDF evidence")
@@ -335,6 +356,7 @@ def parse_document(text, file_id, captured_at, source):
 # ------------------------------------------------------------- entry point
 
 def load_manifest():
+    """evidence_files.csv: file_id, file_path, origin, captured_at."""
     return read_csv(DATASET_DIR / "evidence_files.csv")
 
 
@@ -376,6 +398,7 @@ def load_evidence():
 
 
 def known_emails():
+    """Every email any user has had, current or historical, lower-cased."""
     emails = {r["email"].lower() for r in read_csv(DATASET_DIR / "user_identities.csv")}
     for r in read_csv(DATASET_DIR / "user_audit_log.csv"):
         if r["field_name"] == "email":
