@@ -29,3 +29,66 @@ repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
 worktree=main
 parent_agent=none
 
+## [2026-10-24T18:21:49+00:00] Challenge deadline supplied by user
+
+User Prompt (verbatim, secrets redacted):
+Before we start, the hackerthon started October 24, 2026, 2:30 AM CAT and last 24 hrs
+
+Agent Response Summary:
+Recorded the user-supplied challenge window: start 2026-10-24T02:30 CAT (00:30Z), end 2026-10-25T02:30 CAT (2026-10-25T00:30Z). Time remaining at this entry: 0d 6h 8m. Saved the deadline to agent memory and will track remaining time in later entries.
+
+Actions:
+* Computed time remaining; appended this entry to log.txt; wrote memory file for deadline
+
+Context:
+tool=Claude Code
+model=claude-opus-5-5
+branch=main
+repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
+worktree=main
+parent_agent=none
+
+## [2026-10-24T18:23:56+00:00] Record hackathon deadline
+
+User Prompt (verbatim, secrets redacted):
+Before we start, the hackerthon started October 24, 2026, 2:30 pm CAT and last 24 hrs
+
+Agent Response Summary:
+Recorded the user-supplied challenge window: start 2026-10-24T12:30:00Z (14:30 CAT), end 2026-10-25T12:30:00Z (14:30 CAT). Time remaining at this entry: 0d 18h 6m. Saved the deadline to agent memory so future entries can compute Time Remaining.
+
+Actions:
+* Wrote memory file hackathon-deadline.md and updated MEMORY.md index
+* Appended this entry to log.txt
+
+Context:
+tool=Claude Code
+model=claude-opus-5-5
+branch=main
+repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
+worktree=main
+parent_agent=none
+
+## [2026-10-24T18:30:30+00:00] Phase 0: project skeleton, baseline, and evaluator
+
+User Prompt (verbatim, secrets redacted):
+Since I'm novice, the purpose is not to win the race just learning and if I happen to have that chance to win i will be great too.
+
+Start by phase 0
+
+Agent Response Summary:
+Built the Phase 0 foundation using only the Python standard library: shared contract helpers (operation table, step ordering, deterministic JSON, numeric case_id sort), a solver entry point with a naive baseline that trusts reported_status, and an evaluator with contract checks plus status/step/field/sequence metrics. Verified the evaluator scores gold-vs-gold at 100%, catches four deliberately injected contract faults, and that the full 518-row output passes the contract. Baseline scores 53.1% status accuracy and 0% step recall on the 32 samples, showing reported_status cannot be trusted. Time remaining: 0d 17h 59m.
+
+Actions:
+* Created code/audit/__init__.py, code/audit/common.py
+* Wrote code/main.py (baseline solver) and code/evaluation/main.py (evaluator)
+* Added .gitignore
+* Ran evaluator sanity checks, a broken-file negative test, and full run producing output.csv
+
+Context:
+tool=Claude Code
+model=claude-opus-5-5
+branch=main
+repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
+worktree=main
+parent_agent=none
+
