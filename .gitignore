@@ -1,0 +1,10 @@
+# secrets
+.env
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+# packaging
+code.zip
+.DS_Store
