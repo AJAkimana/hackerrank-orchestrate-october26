@@ -1,0 +1,229 @@
+Sentinel
+
+© Search events, users, IP addresses or references
+
+> Northstar Shop
+
+—
+
+Northstar Shop / Sentinel / Account events
+
+LJ
+
+Overview
+
+Filter
+
+Actions
+
+Account events
+
+b 6 signed events ]
+
+Export
+
+Subject filter: user_03 - 18-26 Aug 2026 UTC
+
+|
+
+LJ
+
+Threats
+
+Timeline
+
+Events (6)
+
+ntegrity
+
+O Account events
+
+—
+
+Events
+
+Categories
+
+Integrity failures
+
+Partition
+
+LJ
+
+Audit logs
+
+0
+
+2026-Q3
+
+——e
+
+—-
+
+—oe
+
+—_—
+
+Detections
+
+Investigations
+
+Events (6)
+
+Updated moments ago - 6 records
+
+audit_record_003 - Raw event
+
+Reports
+
+Time (UTC)
+
+Event
+
+Category
+
+Subject
+
+Actor
+
+Integrity
+
+Reference
+
+event_type
+
+account_closure_recorded
+
+[1] 25 Aug 04:03
+
+Account closure recorded
+
+Account lifecycle
+
+user_03
+
+Automated workflow
+
+Valid
+
+audit_record_003
+
+subject
+
+user_03
+
+actor
+
+automated account workflow
+
+[2] 25 Aug 03:21
+
+Session revoked
+
+Session management
+
+user_03
+
+Security system
+
+Valid
+
+audit_record_002
+
+recorded_at
+
+2026-08-25T04:03:00Z
+
+Recovery challenge completed
+
+Authentication
+
+user_03
+
+User (self)
+
+Valid
+
+audit_record_001
+
+&] 24 Aug 16:14
+
+fingerprint
+
+8f0c...31ad
+
+[2] 22 Aug 11:27
+
+Email change confirmed
+
+Profile update
+
+user_03
+
+User (self)
+
+Valid
+
+audit_record_006
+
+signature
+
+Valid
+
+Authentication
+
+Valid
+
+(5) 20 Aug 09:42
+
+Login from new device
+
+user_03
+
+User (self)
+
+audit_record_005
+
+journal
+
+2026-Q3
+
+Password changed
+
+Authentication
+
+user_03
+
+User (self)
+
+Valid
+
+audit_record_004
+
+[E] 18 Aug 14:05
+
+Activity
+
+LJ
+
+25 Aug
+
+Account closure recorded
+
+25 Aug
+
+Session revoked
+
+24 Aug
+
+Recovery challenge completed
+
+22 Aug
+
+Email change confirmed
+
+Sentinel
+
+Production workspace
+
+build 2026.10.4

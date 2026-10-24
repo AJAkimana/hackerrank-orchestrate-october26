@@ -1,0 +1,215 @@
+Customer Reference
+
+Production
+
+CR
+
+Northstar Shop
+
+£9 Search references, orders, support cases or finance records
+
+Help
+
+Registry
+
+Northstar Shop / Customer Re
+
+c
+
+e Registry / Customer refere
+
+ces
+
+es
+
+Home
+
+Retained reference
+
+Filter
+
+Export
+
+user_17
+
+Customer references
+
+Customer key
+
+Account Platform - eu-west
+
+Overview
+
+Linked records
+
+History
+
+Orders
+
+Support
+
+Refere
+
+ype
+
+Cre
+
+Most recent update
+
+ier team
+
+Customer key
+
+11 Jan 2024 08:42 UTC
+
+10 Mar 2026 07:18 UTC
+
+Account Platform
+
+Finance
+
+Data management
+
+Overview
+
+Updated moments a
+
+U
+
+pdated
+
+4
+
+ds
+
+History
+
+Reports
+
+System
+
+Record reference
+
+Relationship
+
+Created (UTC)
+
+Status
+
+10 Ma
+
+2026
+
+2026
+
+Metadata reviewed
+
+1
+
+Orders
+
+ORD-20263245
+
+Linked to customer
+
+11 Jan 2024 08:45
+
+Active
+
+22 Aug
+
+49
+
+Finance link added
+
+03 Jun 2
+
+Support link added
+
+2
+
+Support
+
+CS-3245
+
+Linked to customer
+
+14 Feb 2024 12:16
+
+Active
+
+14 Feb 2024
+
+Support link added
+
+Support
+
+CS-3378
+
+Linked to customer
+
+03 Jun 2024 09:27
+
+Active
+
+11 Jan
+
+302
+
+202
+
+Reference created
+
+FIN-7742
+
+Linked to customer
+
+Active
+
+Finance
+
+22 Aug 2024 15:03
+
+Activity
+
+@ Reference created
+
+Reco
+
+ded
+
+Order link added
+
+ORD
+
+2
+
+O2€
+
+0263
+
+Support links added
+
+CS-32
+
+5, C
+
+},
+
+5-33
+
+=)
+
+8
+
+3
+
+Finance link added
+
+FIN
+
+742
+
+Metadata reviewed
+
+Recorded

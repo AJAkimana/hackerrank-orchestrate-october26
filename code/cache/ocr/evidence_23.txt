@@ -1,0 +1,193 @@
+Customer Download Center
+
+Production
+
+cD
+
+Northstar Shop
+
+£9 Search exports...
+
+Help
+
+Northstar Shop / Customer Download C
+
+er / Data exports
+
+Home
+
+4 jobs
+
+Filter
+
+Data exports
+
+Orders
+
+Create and manage customer download packages
+
+All exports
+
+Ready
+
+Processing
+
+Expired
+
+Customers
+
+m
+
+Data exports
+
+Re
+
+Proc
+
+Cre
+
+C
+
+d today
+
+D
+
+Wnic
+
+today
+
+Products
+
+Marketing
+
+Updated moments a
+
+U
+
+pdated
+
+4
+
+ds
+
+All exports
+
+export_1260
+
+Analytics
+
+Export ID
+
+Filename
+
+Owner
+
+Status
+
+Created
+
+Owner
+
+ingrid.dahlI@outlook.com
+
+1
+
+export_1261
+
+customer_export_1261.zip
+
+marcus.lee@northstar.shop
+
+Collecting
+
+20 Jun 14:18 UTC
+
+Created
+
+18 Jun 2026 06:42 UTC
+
+Settings
+
+Expires
+
+25 Jun 2026 06:42 UTC
+
+2
+
+export_1260
+
+customer_export_1260.zip
+
+ingrid.dahl@outlook.com
+
+Ready
+
+18 Jun 06:42 UTC
+
+S
+
+31Ze
+
+7
+
+o
+
+18.4 MB
+
+export_1259
+
+customer_export_1259.zip
+
+sara.kim@northstar.shop
+
+Packaging
+
+17 Jun 11:03 UTC
+
+Checksum
+
+SHA-256 - 41ca09...
+
+16 Jun 09:27 UTC
+
+export_1258
+
+customer_export_1258.zip
+
+daniel.park@northstar.shop
+
+Ready
+
+Downlo
+
+d count
+
+Included
+
+Profile - Orders - Saved addresses
+
+Activity
+
+e@ 06:46
+
+Ready for download
+
+06:45
+
+Package created
+
+06:43
+
+Col
+
+Cc
+
+ollec
+
+acting
+
+ustomer records
+
+06:42
+
+Export requested
