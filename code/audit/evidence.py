@@ -323,7 +323,10 @@ def parse_document(text, file_id, captured_at, source):
     for rid, fields in records.items():
         fields["context"] = list(dict.fromkeys(fields["context"]))
         rec = make_record(file_id, captured_at, rid, fields, source, "document")
-        rec["identifiers"] = sorted(identifiers_in(fields["context"]))  # whole text would mix subjects
+        # With several resources the whole text would mix subjects, so use the
+        # nearby lines; a single-resource document is entirely about it.
+        scope_text = fields["text"] if len(records) == 1 else fields["context"]
+        rec["identifiers"] = sorted(identifiers_in(scope_text))
         out.append(rec)
     return out, [{"system_id": r["system_id"], "container": "document", "captured_at": captured_at}
                  for r in out[1:]]
