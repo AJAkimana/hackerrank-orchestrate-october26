@@ -12,14 +12,15 @@
 from .common import DATASET_DIR, read_csv
 from .evidence import load_evidence
 from .identity import IdentityIndex
+from .intent import classify
 from .linking import Linker
 from .state import StateResolver
 from .steps import build_steps
 
 
 def authorizes_deletion(request):
-    """For implementation of treating every request as a deletion request."""
-    return True
+    """Only requests whose text asks for deletion are audited (audit.intent)."""
+    return classify(request["request_text"])[0]
 
 
 class Auditor:
