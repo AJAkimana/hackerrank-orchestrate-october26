@@ -1,3 +1,4 @@
+# Author: AJAkimana
 """Shared building blocks: file paths, CSV I/O, and the step contract.
 
 Everything that the solver (code/main.py) and the evaluator

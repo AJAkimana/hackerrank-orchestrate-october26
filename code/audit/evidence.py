@@ -1,3 +1,4 @@
+# Author: AJAkimana
 """Phase 1: turn every evidence file into one uniform list of records.
 
 Each record answers: "file F, at time T, shows system S / resource R with

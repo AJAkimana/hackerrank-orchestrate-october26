@@ -1,3 +1,4 @@
+# Author: AJAkimana
 """Check that the Phase 1 evidence parsers extract everything.
 
 Usage (from the repository root):

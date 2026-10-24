@@ -1,3 +1,4 @@
+# Author: AJAkimana
 """Entry point: audit every deletion request and write output.csv.
 
 Usage (from the repository root):
