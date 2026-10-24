@@ -287,3 +287,23 @@ repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
 worktree=main
 parent_agent=none
 
+## [2026-10-24T21:19:40+00:00] Evaluation and usage reports
+
+User Prompt (verbatim, secrets redacted):
+Implement the evaluation and usage report files
+
+Agent Response Summary:
+Wrote code/evaluation/custom_cases.py with six team-made, runnable cases on synthetic data (failover-replica ghost copy, evidence after audit_at ignored, account tombstone redaction, flow/backup remediation order, historical-email identity, multilingual deletion intent); all 6 pass, and a mutation check confirmed C2 fails when the late file becomes visible. Wrote code/evaluation/evaluation_report.md with sample metrics (status 100%, sequence 50%, step precision 94.09%, recall 90.67%, F1 92.35%, field accuracy 90.67% for every field), status confusion, per-stage diagnostics, submission contract results, the custom case table, an analysis of remaining failures, 16 failures found with fixes, score progression and limitations. Wrote code/evaluation/usage_report.md stating, after verifying the code has no model or network calls, that the final run made 0 model calls (0 tokens, $0.00), listing the local tools used (Ghostscript, cached Tesseract OCR) and run metrics, and noting that development-time assistant usage is not part of the run and was not metered. No commits made. Time remaining: 0d 15h 10m.
+
+Actions:
+* Created code/evaluation/custom_cases.py, evaluation_report.md, usage_report.md
+* Ran all evaluation scripts to collect metrics; ran custom cases and a mutation sanity check
+
+Context:
+tool=Claude Code
+model=claude-opus-5-5
+branch=main
+repo_root=/Users/akimana/MyFolder/hackathon/hr-orch-oct-26
+worktree=main
+parent_agent=none
+
