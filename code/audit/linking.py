@@ -38,6 +38,14 @@ STATUS_RESULT = {"COMPLETE": "SUCCESS",
                  "PARTIALLY_COMPLETE": "PARTIAL", "NOT_STARTED": "FAILED"}
 
 
+def shows_absence(fields):
+    """True for a lookup that found nothing (404, zero rows, NOT_FOUND)."""
+    return (str(fields.get("http_status", fields.get("status_code", ""))) == "404"
+            or str(fields.get("rows", "")) == "0"
+            or str(fields.get("result", "")).upper() == "NOT_FOUND"
+            or ("profile" in fields and fields["profile"] is None))
+
+
 def timing(resource):
     return ACCOUNT_TIMING if resource.startswith("account_") else OTHER_TIMING
 
@@ -112,21 +120,18 @@ class Linker:
             if support not in link[key]:
                 link[key].append(support)
 
-        # 1. identifier matches in evidence visible at audit time
+        # 1. identifier matches in evidence visible at audit time. A lookup
+        #    that came back "not found" only shows someone searched for the
+        #    identifier, not that the resource stores it, so it is skipped.
         for resource, recs in self.records_by_resource.items():
             for rec in self.visible(recs, audit_at):
-                if ids & set(rec["identifiers"]):
+                if ids & set(rec["identifiers"]) and not shows_absence(rec["fields"]):
                     add(resource, rec["system_id"], "identifier", rec)
 
-        # 2. catalog ownership, plus documents that use the catalog alias
-        for resource, (owner, alias, event) in self.catalog.items():
-            if owner != user_id or ts(event["event_time"]) > audit_at:
-                continue
-            system = event["target_system"]
-            add(resource, system, "catalog", event)
-            for doc in self.visible(self.documents, audit_at):
-                if alias in doc["fields"]["text"]:
-                    add(resource, system, "catalog_alias", doc)
+        # 2. Catalog links (LINK_RESOURCE_IDENTITY) are activity claims. On
+        #    the samples, resources linked only by the catalog are never part
+        #    of the answer, so they are used just to exclude other people's
+        #    resources (see belongs_to_someone_else), not to add any.
 
         # 3. deletion-worker activity around reported_at
         reported = ts(request["reported_at"])
@@ -154,7 +159,7 @@ class Linker:
         an activity-only resource is a claim several overlapping requests
         may make. Claims are settled globally:
 
-          * an identifier/catalog link beats any activity-only claim;
+          * an identifier link beats any activity-only claim;
           * a subject has exactly one primary account. Accounts are matched
             to requests one-to-one, best fit first. The fit is the timing
             (submitted ~1h before reported_at) plus a penalty when the
@@ -162,7 +167,8 @@ class Linker:
             because the workflow derives that status from this very event
             (COMPLETE <- SUCCESS, PARTIALLY_COMPLETE <- PARTIAL,
             NOT_STARTED <- FAILED);
-          * any other contested resource goes to the best-timed request.
+          * any other contested resource goes to the request whose own
+            account deletion happened just before it.
         """
         links = {r["case_id"]: self.link(
             r, subjects[r["case_id"]]) for r in requests}
@@ -181,6 +187,17 @@ class Linker:
             if is_account(resource) and STATUS_RESULT.get(by_case[case]["reported_status"]) != event["reported_result"]:
                 hours += 10
             return hours
+
+        def follow_cost(case, resource):
+            """A request's other resources are processed right after its own
+            account, so measure the gap from that account's event."""
+            when = ts(links[case][resource]["events"][0]["event_time"])
+            starts = [ts(e["event_time"]) for r, link in links[case].items() if is_account(r)
+                      for e in link["events"] if e.get("source_system") == "deletion_worker"]
+            if not starts:
+                return cost(case, resource)
+            gap = (when - max(starts)).total_seconds() / 3600
+            return gap if gap >= 0 else 10 - gap
 
         claims = defaultdict(set)  # activity-only resource -> claiming cases
         strong = set()             # resources some request links for sure
@@ -208,10 +225,11 @@ class Linker:
                 if claims.get(r) != {case}:
                     del case_links[r]
 
-        # everything else: best-timed request wins
+        # everything else: the request whose account was processed just
+        # before it wins
         for r, cases in claims.items():
             if not is_account(r) and len(cases) > 1:
-                best = min(sorted(cases), key=lambda c: cost(c, r))
+                best = min(sorted(cases), key=lambda c: follow_cost(c, r))
                 for case in cases - {best}:
                     del links[case][r]
         return links
